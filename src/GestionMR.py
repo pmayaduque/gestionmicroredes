@@ -1,34 +1,65 @@
 import FuentesClass as FuentesClass
+import opt as opt
 import pandas as pd
+import json
 import sys
+import pyomo.environ as pyo
 
-def read_data(filepath):
-    generators_df = pd.read_csv(filepath, sep=',', header=None)
-    return generators_df
+def read_data(param_filepath, forecast_filepath, demand_filepath):#, filepath_bat):
+    #generators = pd.read_csv(param_filepath, sep=',', header=0)
 
-def create_generators(generators_df):
+    with open(param_filepath) as parameters:
+        data = json.load(parameters)
+    
+    generators = data['generators']
+    forecast_df = pd.read_csv(forecast_filepath, sep=',', header=0)
+    battery = data['battery']
+
+    demand = pd.read_csv(demand_filepath, squeeze=True, sep=',', header=None).to_dict()
+    
+    return generators, battery, forecast_df, demand
+
+def create_generators(generators):
     generators_dict = {}
-    for i in generators_df.columns:
-        aux_list = [j for j in generators_df[i] if str(j) != 'nan']
-        if generators_df[i][0] == '0':
-            print(aux_list[1:])
-            obj_aux = FuentesClass.Solar(*aux_list[1:])
-        elif generators_df[i][0] == '1':
-            obj_aux = FuentesClass.Eolica(*aux_list[1:])
-        elif generators_df[i][0] == '2':
-            obj_aux = FuentesClass.Hidraulica(*aux_list[1:])
-        elif generators_df[i][0] == '3':
-            obj_aux = FuentesClass.Diesel(*aux_list[1:])
+    for i in generators:
+        if i['tec'] == 'S':
+            obj_aux = FuentesClass.Solar(*i.values())
+        elif i['tec'] == 'W':
+            obj_aux = FuentesClass.Eolica(*i.values())
+        elif i['tec'] == 'H':
+            obj_aux = FuentesClass.Hidraulica(*i.values())
+        elif i['tec'] == 'D':
+            obj_aux = FuentesClass.Diesel(*i.values())
+        # else:
+        #     raise RuntimeError('Generator ({}) with unknow tecnology ({}).'.format(i['id_gen'], i['tec'])
+
+        generators_dict[i['id_gen']] = obj_aux
         
-        generators_dict[generators_df[i][1]] = obj_aux
     return generators_dict
 
 
 
 if __name__ == "__main__":
-    filepath = 'data/parametros.csv'
-    generators_df = read_data(filepath)
-    generators_dict = create_generators(generators_df)
-    #li = generators_df[3].to_list()
+    param_filepath = '../data/parameters.json'
+    forecast_filepath = '../data/forecast.csv'
+    demand_filepath = '../data/demand.csv'
+    generators, battery, forecast_df, demand = read_data(param_filepath, forecast_filepath, demand_filepath)
+    generators_dict = create_generators(generators)
+    
+    
+    
+    
+    model = opt.make_model(generators_dict, forecast_df, battery, demand)
+    opt = pyo.SolverFactory('gurobi')
+    results = opt.solve(model)
+    term_cond = results.solver.termination_condition
+    if term_cond != pyo.TerminationCondition.optimal:
+        print ("Termination condition={}".format(term_cond))
+        raise RuntimeError("Optimization failed.")
+    print(results)
+    #model.x.pprint()
+    #model.G.pprint()
+    #model.B_rule.pprint()
+    #li = generators[3].to_list()
     #li_aux = [i for i in li if str(i) != 'nan']
     

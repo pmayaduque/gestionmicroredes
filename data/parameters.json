@@ -1,0 +1,106 @@
+{
+    "generators": [
+        {
+            "id_gen": "Solar1",
+            "tec": "S",
+            "va_op": 2500,
+            "ef": 0.87,
+            "A": 4
+        },
+        {
+            "id_gen": "Wind1",
+            "tec": "W",
+            "va_op": 2650,
+            "ef": 0.85,
+            "s": 3.5,
+            "p": 1.28,
+            "w_min": 10,
+            "w_a": 18,
+            "w_max": 20
+        },
+        {
+            "id_gen": "Hydro1",
+            "tec":"H",
+            "va_op": 1850,
+            "ef": 0.88,
+            "ht": 10,
+            "p": 997
+        },
+        {
+            "id_gen": "Diesel1",
+            "tec": "D",
+            "va_op": 3000,
+            "ef": 0.3,
+            "g_min":20,
+            "g_max": 30
+        },
+        {
+            "id_gen": "Diesel2",
+            "tec": "D",
+            "va_op": 2850,
+            "ef": 0.289,
+            "g_min":15,
+            "g_max": 20
+        },
+        {
+            "id_gen": "Solar2",
+            "tec": "S",
+            "va_op": 2750,
+            "ef": 0.9,
+            "A": 4
+        },
+        {
+            "id_gen": "Solar3",
+            "tec": "S",
+            "va_op": 2750,
+            "ef": 0.9,
+            "A": 4
+        },
+        {
+            "id_gen": "Solar4",
+            "tec": "S",
+            "va_op": 2750,
+            "ef": 0.9,
+            "A": 4
+        },
+        {
+            "id_gen": "Solar5",
+            "tec": "S",
+            "va_op": 2750,
+            "ef": 0.9,
+            "A": 4
+        },
+        {
+            "id_gen": "Wind2",
+            "tec": "W",
+            "va_op": 2650,
+            "ef": 0.85,
+            "s": 3.5,
+            "p": 1.28,
+            "w_min": 10,
+            "w_a": 18,
+            "w_max": 20
+        },
+        {
+            "id_gen": "Wind3",
+            "tec": "W",
+            "va_op": 2650,
+            "ef": 0.85,
+            "s": 3.5,
+            "p": 1.28,
+            "w_min": 10,
+            "w_a": 18,
+            "w_max": 20
+        }
+    ],
+    
+    "battery":{
+        "id_bat": "Battery1",
+        "ef": 0.95,
+        "o": 0.05,
+        "ef_inv": 0.95,
+        "eb_zero": 100,
+        "zb": 2
+    }
+
+}
