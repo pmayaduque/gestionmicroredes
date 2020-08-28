@@ -4,6 +4,7 @@ import pandas as pd
 import json
 import sys
 import pyomo.environ as pyo
+from pyomo.core import value
 
 def read_data(param_filepath, forecast_filepath, demand_filepath):#, filepath_bat):
     #generators = pd.read_csv(param_filepath, sep=',', header=0)
@@ -37,6 +38,14 @@ def create_generators(generators):
         
     return generators_dict
 
+def export_results(model):
+    #results = {}
+    G_data = {i: [0]*len(model.T) for i in model.calI}
+    for (i,t), v in model.G.items():
+        G_data[i][t] = value(v)
+    
+    G_df = pd.DataFrame(G_data, columns=[*G_data.keys()])
+    return G_df
 
 
 if __name__ == "__main__":
@@ -47,19 +56,22 @@ if __name__ == "__main__":
     generators_dict = create_generators(generators)
     
     
-    
-    
     model = opt.make_model(generators_dict, forecast_df, battery, demand)
+    #model.EW.pprint()
+    #model.maxG_diesel_rule.pprint()
+    #sys.exit()
     opt = pyo.SolverFactory('gurobi')
     results = opt.solve(model)
     term_cond = results.solver.termination_condition
     if term_cond != pyo.TerminationCondition.optimal:
         print ("Termination condition={}".format(term_cond))
         raise RuntimeError("Optimization failed.")
-    print(results)
-    #model.x.pprint()
-    #model.G.pprint()
-    #model.B_rule.pprint()
-    #li = generators[3].to_list()
-    #li_aux = [i for i in li if str(i) != 'nan']
+    model.G.pprint()
+    G_df = export_results(model)
+    print(G_df)
+    #model.EL.pprint()
+    #model.EB.pprint()
+    #model.temp.pprint()
+    
+    
     
