@@ -45,7 +45,13 @@ def export_results(model):
         G_data[i][t] = value(v)
     
     G_df = pd.DataFrame(G_data, columns=[*G_data.keys()])
-    return G_df
+
+    x_data = {i: [0]*len(model.T) for i in model.I}
+    for (i,t), v in model.x.items():
+        x_data[i][t] = value(v)
+    
+    x_df = pd.DataFrame(x_data, columns=[*x_data.keys()])
+    return G_df, x_df
 
 
 if __name__ == "__main__":
