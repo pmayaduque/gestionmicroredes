@@ -75,6 +75,8 @@ def make_model(generators_dict=None, forecast_df=None, battery=None, demand=None
         if gen.tec == 'D':
             # return pyo.inequality(model.x[i,t]*gen.g_min, model.G[i,t], model.x[i,t]*gen.g_max)
             return 0 <= model.G[i,t] - model.x[i,t]*gen.g_min
+        if gen.tec == 'G':
+            return model.G[i,t] <= model.x[i,t]*gen.g_max
     
     model.G_rule = pyo.Constraint(model.I, model.T, rule=G_rule)
 

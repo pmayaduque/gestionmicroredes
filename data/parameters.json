@@ -4,14 +4,14 @@
             "id_gen": "Solar1",
             "tec": "S",
             "va_op": 700,
-            "ef": 0.87,
+            "ef": 0.16,
             "A": 4
         },
         {
             "id_gen": "Wind1",
             "tec": "W",
             "va_op": 950,
-            "ef": 0.85,
+            "ef": 0.45,
             "s": 3.5,
             "p": 1.28,
             "w_min": 2.6,
@@ -22,7 +22,7 @@
             "id_gen": "Hydro1",
             "tec":"H",
             "va_op": 500,
-            "ef": 0.08,
+            "ef": 0.8,
             "ht": 3,
             "p": 997
         },
@@ -30,7 +30,7 @@
             "id_gen": "Diesel1",
             "tec": "D",
             "va_op": 3000,
-            "ef": 0.25,
+            "ef": 0.24,
             "g_min":15,
             "g_max": 20
         },
@@ -38,10 +38,17 @@
             "id_gen": "Diesel2",
             "tec": "D",
             "va_op": 2850,
-            "ef": 0.259,
+            "ef": 0.25,
             "g_min":10,
             "g_max": 15
+        },
+        {
+            "id_gen": "Central",
+            "tec": "G",
+            "va_op": 5000,
+            "g_max": 60
         }
+
     ],
     
     "battery":{
