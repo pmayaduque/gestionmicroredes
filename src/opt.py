@@ -134,7 +134,7 @@ def make_model(generators_dict=None, forecast_df=None, battery=None, demand=None
         if t == 0:
             return pyo.Constraint.Skip
         else:
-            return model.Ic[t] == model.Ic[t-1] + 1 * model.y[t] - model.Ic[t-1]*(1-model.y[t])
+            return model.Ic[t] == (model.Ic[t-1]) + (1 * model.y[t]) - (model.Ic[t-1]*(1-model.y[t]))
     
     model.Iconstraint = pyo.Constraint(model.T, rule=Iconstraint_rule)
 
