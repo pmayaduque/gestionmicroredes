@@ -139,7 +139,7 @@ def make_model(generators_dict=None, forecast_df=None, battery=None, demand=None
     model.Iconstraint = pyo.Constraint(model.T, rule=Iconstraint_rule)
 
     def Pconstraint_rule(model):
-        return sum(model.Ic[t] for t in model.T) >= model.P * model.T
+        return sum(model.Ic[t] for t in model.T) >= model.P * len(model.T)
     
     model.Pconstraint = pyo.Constraint(rule=Pconstraint_rule)
 
