@@ -24,6 +24,8 @@ def make_model(generators_dict=None, forecast_df=None, battery=None, demand=None
 
     model.D = pyo.Param(model.T, initialize=demand)
 
+    model.P = pyo.Param(initialize=5)
+
     model.x = pyo.Var(model.I, model.T, within=pyo.Binary, initialize=0)
 
     model.G = pyo.Var(model.calI, model.T, within=pyo.NonNegativeReals, initialize=0)
@@ -31,6 +33,10 @@ def make_model(generators_dict=None, forecast_df=None, battery=None, demand=None
     model.EB = pyo.Var(model.T, within=pyo.NonNegativeReals, initialize=0) #Power intended for charging the storage unit in time interval t.
 
     model.B = pyo.Var(model.T, within=pyo.NonNegativeReals) #Power level in battery unit over time period t.
+
+    model.y = pyo.Var(model.T, within=pyo.Binary, initialize=0)
+
+    model.Ic = pyo.Var(model.T, within=pyo.NonNegativeReals) #Numero de periodos de carga continua
 
     def B_rule(model, t):
         if t == 0:
@@ -110,7 +116,35 @@ def make_model(generators_dict=None, forecast_df=None, battery=None, demand=None
         return model.D[t] == rs #(model.D[t], rs)
 
     model.Dconstraint = pyo.Constraint(model.T, rule=Dconstraint_rule)
+
+
+    #Nuevas restricciones control de baterías
+
+    def CargaConstraint_rule(model, t):
+        return battery['zb'] * model.y[t] <= model.EB[t]
     
+    model.CargaConstraint = pyo.Constraint(model.T, rule=CargaConstraint_rule)
+
+    def DescargaConstraint_rule(model, t):
+        return battery['epsilon'] * model.y[t] <= model.EB[t]
+    
+    model.DescargaConstraint = pyo.Constraint(model.T, rule=DescargaConstraint_rule)
+
+    def Iconstraint_rule(model, t):
+        if t == 0:
+            return pyo.Constraint.Skip
+        else:
+            return model.Ic[t] == model.Ic[t-1] + 1 * model.y[t] - model.Ic[t-1]*(1-model.y[t])
+    
+    model.Iconstraint = pyo.Constraint(model.T, rule=Iconstraint_rule)
+
+    def Pconstraint_rule(model):
+        return sum(model.Ic[t] for t in model.T) >= model.P * model.T
+    
+    model.Pconstraint = pyo.Constraint(rule=Pconstraint_rule)
+
+
+    #Funcion objetivo
 
     def obj_rule(model):
 

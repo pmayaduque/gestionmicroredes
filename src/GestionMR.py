@@ -6,6 +6,8 @@ import sys
 import pyomo.environ as pyo
 from pyomo.core import value
 
+import sys
+
 def read_data(param_filepath, forecast_filepath, demand_filepath):#, filepath_bat):
     #generators = pd.read_csv(param_filepath, sep=',', header=0)
 
@@ -63,9 +65,10 @@ if __name__ == "__main__":
     
     
     model = opt.make_model(generators_dict, forecast_df, battery, demand)
+
     #model.EW.pprint()
     #model.maxG_diesel_rule.pprint()
-    #sys.exit()
+    sys.exit()
     opt = pyo.SolverFactory('gurobi')
     results = opt.solve(model)
     term_cond = results.solver.termination_condition
