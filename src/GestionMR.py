@@ -65,6 +65,7 @@ if __name__ == "__main__":
     
     
     model = opt.make_model(generators_dict, forecast_df, battery, demand)
+    model.maxS.pprint()
 
     #model.EW.pprint()
     #model.maxG_diesel_rule.pprint()

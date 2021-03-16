@@ -58,7 +58,12 @@
         "ef_inv": 0.95,
         "eb_zero": 5,
         "zb": 10,
-        "epsilon": 0.1
+        "epsilon": 0.1,
+        "up_limit":0.8,
+        "down_limit": 0.2,
+        "M": 8,
+        "mcr": 1,
+        "mdr": 1
     }
 
 }
