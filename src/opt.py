@@ -2,7 +2,8 @@ import pyomo.environ as pyo
 import pandas as pd
 import sys
 
-def make_model(generators_dict=None, forecast_df=None, battery=None, demand=None):
+def make_model(generators_dict=None, forecast_df=None, battery=None, demand=None,
+    down_limit=None, up_limit=None, l_min=None, l_max=None):
     """
     Crea el modelo.
     
@@ -18,13 +19,18 @@ def make_model(generators_dict=None, forecast_df=None, battery=None, demand=None
     model = pyo.ConcreteModel(name="Gestion de Micro Redes")
     
     model.I = pyo.Set(initialize=[i for i in generators_dict.keys()])
-    model.bat = pyo.Set(initialize=[battery['id_bat']])
+    model.bat = pyo.Set(initialize=[battery.id_bat])
     model.calI = model.I | model.bat
     model.T = pyo.Set(initialize=[i for i in range(len(forecast_df))])
 
     model.D = pyo.Param(model.T, initialize=demand)
 
     model.P = pyo.Param(initialize=5)
+
+    model.up_limit = pyo.Param(initialize=up_limit)
+    model.down_limit = pyo.Param(initialize= down_limit)
+    model.l_min = pyo.Param(initialize=l_min)
+    model.l_max = pyo.Param(initialize=l_max)
 
     model.x = pyo.Var(model.I, model.T, within=pyo.Binary, initialize=0)
 
@@ -48,14 +54,14 @@ def make_model(generators_dict=None, forecast_df=None, battery=None, demand=None
 
     def B_rule(model, t):
         if t == 0:
-            expr = battery['eb_zero'] * (1-battery['o'])
-            expr += model.EB[t] * battery['ef']
-            expr -= (model.G[battery['id_bat'], t]/battery['ef_inv'])
+            expr = battery.eb_zero * (1-battery.o)
+            expr += model.EB[t] * battery.ef
+            expr -= (model.G[battery.id_bat, t]/battery.ef_inv)
             return model.B[t] == expr
         else:
-            expr = model.B[t-1] * (1-battery['o'])
-            expr += model.EB[t] * battery['ef']
-            expr -= (model.G[battery['id_bat'], t]/battery['ef_inv'])
+            expr = model.B[t-1] * (1-battery.o)
+            expr += model.EB[t] * battery.ef
+            expr -= (model.G[battery.id_bat, t]/battery.ef_inv)
             return model.B[t] == expr
 
     model.B_rule = pyo.Constraint(model.T, rule=B_rule)
@@ -67,7 +73,7 @@ def make_model(generators_dict=None, forecast_df=None, battery=None, demand=None
     def Bconstraint_rule(model, t):
         # for b in model.bat:
         #     return (0, model.G[b,t], 0)
-        return (0.2*battery['zb'], model.B[t], battery['zb'])
+        return (0.2*battery.zb, model.B[t], battery.zb)
 
     model.Bconstraint = pyo.Constraint(model.T, rule=Bconstraint_rule)
     
@@ -125,41 +131,15 @@ def make_model(generators_dict=None, forecast_df=None, battery=None, demand=None
 
     model.Dconstraint = pyo.Constraint(model.T, rule=Dconstraint_rule)
 
-
-    #----------Nuevas restricciones control de baterías (PRIMERA OPCIÓN)
-
-    # def CargaConstraint_rule(model, t):
-    #     return battery['zb'] * model.y[t] <= model.EB[t]
-    
-    # model.CargaConstraint = pyo.Constraint(model.T, rule=CargaConstraint_rule)
-
-    # def DescargaConstraint_rule(model, t):
-    #     return battery['epsilon'] * model.y[t] <= model.EB[t]
-    
-    # model.DescargaConstraint = pyo.Constraint(model.T, rule=DescargaConstraint_rule)
-
-    # def Iconstraint_rule(model, t):
-    #     if t == 0:
-    #         return pyo.Constraint.Skip
-    #     else:
-    #         return model.Ic[t] == (model.Ic[t-1]) + (1 * model.y[t]) - (model.Ic[t-1]*(1-model.y[t]))
-    
-    # model.Iconstraint = pyo.Constraint(model.T, rule=Iconstraint_rule)
-
-    # def Pconstraint_rule(model):
-    #     return sum(model.Ic[t] for t in model.T) >= model.P * len(model.T)
-    
-    # model.Pconstraint = pyo.Constraint(rule=Pconstraint_rule)
-
     #----------Nuevas restricciones control de baterías (SEGUNDA OPCIÓN)
 
     def DescargaConstraint_rule(model, t):
-        return battery['zb'] * model.y[t] >= model.G[battery['id_bat'], t]
+        return battery.zb * model.y[t] >= model.G[battery.id_bat, t]
     
     model.DescargaConstraint = pyo.Constraint(model.T, rule=DescargaConstraint_rule)
 
     def ndc_rule(model, t):
-        return battery['epsilon'] * model.y[t] <= model.G[battery['id_bat'], t]
+        return battery.epsilon * model.y[t] <= model.G[battery.id_bat, t]
     
     model.ndc = pyo.Constraint(model.T, rule=ndc_rule)
 
@@ -177,43 +157,56 @@ def make_model(generators_dict=None, forecast_df=None, battery=None, demand=None
     model.aux1_constraint = pyo.Constraint(model.T, rule=aux1_rule)
 
     def maxS_rule(model):
-        return model.Sc <= battery['M']
+        return model.Sc <= battery.M
     
     model.maxS = pyo.Constraint(rule=maxS_rule)
 
     #Tasa máxima de carga y descarga
     def maxDescRate_rule(model, t):
-        return model.G[battery['id_bat'], t] <= battery['mdr']
+        return model.G[battery.id_bat, t] <= battery.mdr
 
     model.maxDescRate_constraint = pyo.Constraint(model.T, rule=maxDescRate_rule)
 
     def maxChaRate_rule(model, t):
-        return model.EB[t] <= battery['mcr']
+        return model.EB[t] <= battery.mcr
 
     model.maxChaRate_constraint = pyo.Constraint(model.T, rule=maxChaRate_rule)
 
     #Descarga profunda
 
     def deepDesc1_rule(model, t):
-        return (model.B[t]/battery['zb']) + model.pmin[t] >= battery['down_limit']
+        return (model.B[t]/battery.zb) + model.pmin[t] >= model.down_limit
     
     model.deepDesc1_constraint = pyo.Constraint(model.T, rule=deepDesc1_rule)
 
     def deepDesc2_rule(model, t):
-        return (model.B[t]/battery['zb']) - (1 - model.pmin[t]) <= battery['down_limit']
+        return (model.B[t]/battery.zb) - (1 - model.pmin[t]) <= model.down_limit
     
     model.deepDesc2_constraint = pyo.Constraint(model.T, rule=deepDesc2_rule)
 
     #Sobrecarga
     def overload1_rule(model, t):
-        return (model.B[t]/battery['zb']) - model.pmax[t] <= battery['up_limit']
+        return (model.B[t]/battery.zb) - model.pmax[t] <= model.up_limit
     
     model.overload1_constraint = pyo.Constraint(model.T, rule=overload1_rule)
 
     def overload2_rule(model, t):
-        return (model.B[t]/battery['zb']) + (1 - model.pmax[t]) >= battery['up_limit']
+        return (model.B[t]/battery.zb) + (1 - model.pmax[t]) >= model.up_limit
     
     model.overload2_constraint = pyo.Constraint(model.T, rule=overload2_rule)
+
+    # Numero de periodos máximos en los que se entra en descarga profunda
+
+    def l_min_rule(model):
+        return sum(model.pmin[t] for t in model.T) <= model.l_min
+    model.l_min_constraint = pyo.Constraint(rule=l_min_rule)
+
+    # Numero de periodos máximos en los que se entra en sobrecarga
+
+    def l_max_rule(model):
+        return sum(model.pmax[t] for t in model.T) <= model.l_max
+    model.l_max_constraint = pyo.Constraint(rule=l_max_rule)
+
 
     #Funcion objetivo
 

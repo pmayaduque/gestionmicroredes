@@ -41,7 +41,7 @@ class Diesel(Generator):
         super(Diesel, self).__init__(id_gen, va_op)
 
 class Bateria():
-    def __init__(self, id_bat, ef, o, ef_inv, eb_zero):
+    def __init__(self, id_bat, ef, o, ef_inv, eb_zero, zb, epsilon, M, mcr, mdr):
         """
         Crea los objetos que son unidades de almacenamiento de energía.
         Args:
@@ -49,9 +49,19 @@ class Bateria():
             ef (float) eficiencia de la batería.
             o (float) tasa de autodescarga.
             ef_inv (float) eficiencia del inversor.
+            eb_zero (float) carga inicial de la batería dentro del horizonte de tiempo
+            zb (float) capacidad máxima de la batería en terminos Kwh
+            mdr (float) tasa de descarga máxima en terminos Kwh
+            mcr (float) tasa de carga máxima en terminos Kwh
+
         """
         self.id_bat = id_bat
         self.ef = ef
         self.o = o
         self.ef_inv = ef_inv
         self.eb_zero = eb_zero
+        self.zb = zb
+        self.epsilon = epsilon
+        self.mdr = mdr
+        self.mcr = mcr
+        self.M = M
