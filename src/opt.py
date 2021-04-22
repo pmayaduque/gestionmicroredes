@@ -73,7 +73,7 @@ def make_model(generators_dict=None, forecast_df=None, battery=None, demand=None
     def Bconstraint_rule(model, t):
         # for b in model.bat:
         #     return (0, model.G[b,t], 0)
-        return (0.2*battery.zb, model.B[t], battery.zb)
+        return model.B[t] <= battery.zb
 
     model.Bconstraint = pyo.Constraint(model.T, rule=Bconstraint_rule)
     
@@ -85,6 +85,7 @@ def make_model(generators_dict=None, forecast_df=None, battery=None, demand=None
             if forecast_df['Wt'][t] < gen.w_min:
                 return model.G[i,t] == 0
             elif forecast_df['Wt'][t] < gen.w_a:
+                # return model.G[i,t] == 0
                 return model.G[i,t] == (1/2) * gen.p * gen.s * (forecast_df['Wt'][t]**3) * gen.ef * model.x[i,t]
             elif forecast_df['Wt'][t] <= gen.w_max:
                 return model.G[i,t] == (1/2) * gen.p * gen.s * (gen.w_a**3) * gen.ef * model.x[i,t]
@@ -110,28 +111,42 @@ def make_model(generators_dict=None, forecast_df=None, battery=None, demand=None
     model.maxG_diesel_rule = pyo.Constraint(model.I, model.T, rule=maxG_diesel_rule)
 
     def Gconstraint_rule(model, t):
-        ls = sum(model.G[i,t] for i in model.I if generators_dict[i].tec == 'S' or generators_dict[i].tec == 'W')
+        ls = sum(model.G[i,t] for i in model.I if generators_dict[i].tec == 'S' or 
+                    generators_dict[i].tec == 'W' or generators_dict[i].tec == 'H' or
+                    generators_dict[i].tec == 'D')
 
         rs = model.EL[t] + model.EB[t] + model.EW[t]
         return ls == rs
 
     model.Gconstraint = pyo.Constraint(model.T, rule=Gconstraint_rule)
-
-    model.temp = pyo.Var(model.T, within=pyo.NonNegativeReals, initialize=0)
-
+    
     def Dconstraint_rule(model, t):
         
         rs = model.EL[t]
         rs += sum(model.G[b,t] for b in model.bat)
-        rs += sum(model.G[i,t] for i in model.I if generators_dict[i].tec == 'H')
-        rs += sum(model.G[i,t] for i in model.I if generators_dict[i].tec == 'D')
-        rs -= model.temp[t] #Variable que guarda la energia desperdiciada en las fuentes H y D
+        # rs += sum(model.G[i,t] for i in model.I if generators_dict[i].tec == 'H')
+        # rs += sum(model.G[i,t] for i in model.I if generators_dict[i].tec == 'D')
+        # rs -= model.temp[t] #Variable que guarda la energia desperdiciada en las fuentes H y D
         
         return model.D[t] == rs #(model.D[t], rs)
 
     model.Dconstraint = pyo.Constraint(model.T, rule=Dconstraint_rule)
+    #sys.exit()
 
+    
     #----------Nuevas restricciones control de baterías (SEGUNDA OPCIÓN)
+    #Tasa máxima de carga y descarga
+    def maxDescRate_rule(model, t):
+        return model.G[battery.id_bat, t] <= battery.mdr
+
+    model.maxDescRate_constraint = pyo.Constraint(model.T, rule=maxDescRate_rule)
+
+    def maxChaRate_rule(model, t):
+        return model.EB[t] <= battery.mcr
+
+    model.maxChaRate_constraint = pyo.Constraint(model.T, rule=maxChaRate_rule)
+
+    
 
     def DescargaConstraint_rule(model, t):
         return battery.zb * model.y[t] >= model.G[battery.id_bat, t]
@@ -160,17 +175,6 @@ def make_model(generators_dict=None, forecast_df=None, battery=None, demand=None
         return model.Sc <= battery.M
     
     model.maxS = pyo.Constraint(rule=maxS_rule)
-
-    #Tasa máxima de carga y descarga
-    def maxDescRate_rule(model, t):
-        return model.G[battery.id_bat, t] <= battery.mdr
-
-    model.maxDescRate_constraint = pyo.Constraint(model.T, rule=maxDescRate_rule)
-
-    def maxChaRate_rule(model, t):
-        return model.EB[t] <= battery.mcr
-
-    model.maxChaRate_constraint = pyo.Constraint(model.T, rule=maxChaRate_rule)
 
     #Descarga profunda
 
@@ -206,13 +210,13 @@ def make_model(generators_dict=None, forecast_df=None, battery=None, demand=None
     def l_max_rule(model):
         return sum(model.pmax[t] for t in model.T) <= model.l_max
     model.l_max_constraint = pyo.Constraint(rule=l_max_rule)
-
-
+    
+    
     #Funcion objetivo
 
     def obj_rule(model):
 
-        return sum(sum(generators_dict[i].va_op * model.G[i,t] for t in model.T)for i in model.I) +0.1*sum(model.temp[t] for t in model.T)# Incluir temporal
+        return sum(sum(generators_dict[i].va_op * model.G[i,t] for t in model.T)for i in model.I) +0.1*sum(model.EW[t] for t in model.T)# Incluir temporal
 
     model.generation_cost = pyo.Objective(rule=obj_rule)
 

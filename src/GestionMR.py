@@ -7,6 +7,9 @@ import pandas as pd
 import string
 import random
 import csv
+import seaborn as sns
+import matplotlib.pyplot as plt
+import plotly.graph_objects as go
 
 import json
 import sys
@@ -14,14 +17,16 @@ import os
 import time
 
 
-def read_data(forecast_filepath, demand_filepath):#, filepath_bat):
-    #generators = pd.read_csv(param_filepath, sep=',', header=0)
+def read_data(forecast_filepath, demand_filepath, sepr=','):#, filepath_bat):
 
+    #Identify delimiter
+    with open(forecast_filepath, newline='') as forecast:
+        dialect = csv.Sniffer().sniff(forecast.read(1024))
+    forecast_df = pd.read_csv(forecast_filepath, sep=dialect.delimiter, header=0, index_col='t')
 
-    forecast_df = pd.read_csv(forecast_filepath, sep=',', header=0)
-    
-
-    demand = pd.read_csv(demand_filepath, squeeze=True, sep=',', header=None).to_dict()
+    with open(demand_filepath, newline='') as forecast:
+        dialect = csv.Sniffer().sniff(forecast.read(1024))
+    demand = pd.read_csv(demand_filepath, squeeze=True, sep=dialect.delimiter, header=0)['demand'].to_dict()
     
     return forecast_df, demand
 
@@ -96,25 +101,72 @@ def export_results(model, location, day, x_df, G_df, b_df, execution_time,
 
     return folder_name
 
+def visualize_results(g_df, x_df, b_df):
+    x_df.insert(0, "period", x_df.index)
+    g_df.insert(0, "period", g_df.index)
+    # b_df.insert(0, "period", b_df.index)
+    
+    """
+    sns.set_style("whitegrid")
+    ax = sns.lineplot(data=x_df.drop('period', axis=1))
+    ax.set(xticks=x_df.period)
+    ax.legend(loc='right', bbox_to_anchor=(1.25, 0.5), ncol=1)
+    plt.show()
+    """
+    
+    sns.set_style("whitegrid")
+    ax = sns.lineplot(data=g_df.drop('period', axis=1), dashes=False)
+    ax.set(xticks=g_df.period)
+    ax.legend(loc='right', bbox_to_anchor=(1.25, 0.5), ncol=1)
+    plt.show()
+    
+    """
+    fig = go.Figure()
+    # Create and style traces
+    fig.add_trace(go.Scatter(x=g_df['period'], y=g_df['Solar1'], name='Solar1',
+                            line=dict(color='firebrick', width=1)))
+    fig.add_trace(go.Scatter(x=g_df['period'], y=g_df['Wind1'], name='Wind1',
+                            line=dict(color='royalblue', width=1)))
+    fig.add_trace(go.Scatter(x=g_df['period'], y=g_df['Hydro1'], name='Hydro1',
+                            line=dict(color='green', width=1)))
+    fig.add_trace(go.Scatter(x=g_df['period'], y=g_df['Diesel1'], name='Diesel1',
+                            line=dict(color='red', width=1)))
+    fig.add_trace(go.Scatter(x=g_df['period'], y=g_df['Diesel2'], name='Diesel2',
+                            line=dict(color='black', width=1)))
+
+
+    # Edit the layout
+    fig.update_layout(title='Energy dispatch',
+                    xaxis_title='period',
+                    yaxis_title='generation (kw)')
+
+
+    fig.show()
+    """
+    return None
+
 
 if __name__ == "__main__":
-    param_filepath = '../data/parameters.json'
+    
     locations = ['P', 'SA', 'PN']
     days = ['01', '02', '03', '04', '05', '06', '07']
     
     # Just Test conditions
     location = 'ME'
     day = '01'
-    forecast_filepath = '../data/forecast.csv'
-    demand_filepath = '../data/demand.csv'
+    forecast_filepath = '../data/instances/P03FORECAST.csv'
+    demand_filepath = '../data/instances/P03DEMAND.csv'
+    param_filepath = '../data/parameters_P.json'
+    
 
     # forecast_filepath = os.path.join('../data/instances', str(location+day+'FORECAST.csv'))
     # demand_filepath = os.path.join('../data/instances', str(location+day+'DEMAND.csv'))
     
-    forecast_df, demand = read_data(forecast_filepath, demand_filepath)
+    forecast_df, demand = read_data(forecast_filepath, demand_filepath, sepr=';')
+    
     generators_dict, battery = create_generators(param_filepath)
 
-    down_limit, up_limit, l_min, l_max = 0.2, 0.8, 4, 4
+    down_limit, up_limit, l_min, l_max = 0.2, 0.85, 4, 4
 
     
     
@@ -134,6 +186,7 @@ if __name__ == "__main__":
     
 
     G_df, x_df, b_df = create_results(model)
+    """
     folder_name = export_results(model, location, day, x_df, G_df, b_df,
         execution_time, down_limit, up_limit, l_max, l_min, term_cond)
     
@@ -141,6 +194,9 @@ if __name__ == "__main__":
     #model.EL.pprint()
     #model.EB.pprint()
     #model.temp.pprint()
+    """
+    visualize_results(G_df, x_df, b_df)
+    model.G.pprint()
     
     
     
